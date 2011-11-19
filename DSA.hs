@@ -53,10 +53,12 @@ verify (p, q, g) y z (r, s) = (v - r) `mod` p == 0
 check :: ParamTuple -> Bool
 check (p, q, g) = and [
    p < 2^1024
+ , 2^1023 < p
  , q < 2^160
+ , 2^159 < q
  , probablyPrime p
  , probablyPrime q
- , ((p-1) `mod2` q) == 0
+ , ((p-1) `mod` q) == 0
  , g > 1
  , moduloPower p g q == 1
  ]
@@ -185,7 +187,7 @@ prop_exponentiation n b e = n > 0 && e >= 0 ==> ((f e)*b - f (e+1)) `mod` n == 0
   where f = moduloPower n b
 
 -- This test *sometimes* works!
-prop_signverify q' x z = q' > 2 && x > 0 && check (p, q, g) ==> verify (p, q, g) y z sig
+prop_signverify q' x z = q' > 2 && x > 0 ==> verify (p, q, g) y z sig
   where q        = firstPrimeFrom (q'+100)
         g        = head [ g | g <- [2..], moduloPower p g q == 1 ]
         y        = moduloPower p g x
