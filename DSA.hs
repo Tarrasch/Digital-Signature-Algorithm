@@ -136,7 +136,7 @@ probablyPrime n = not . or $ map f list
 
 -- Random generation:
 
-constantStdGen = mkStdGen 0
+constantStdGen = mkStdGen 1234567 -- a random number
 
 randomBigInteger :: RandomGen g => Int -- ^ Number of bytes
                                 -> g   -- ^ Generator
@@ -147,14 +147,21 @@ randomBigPrime :: RandomGen g => Int -- ^ Number of bytes
                               -> g   -- ^ Generator
                               -> (Integer, g)
 randomBigPrime n g = let (bignum, g') = randomBigInteger n g
-                     in (fromJust $ find probablyPrime [bignum..], g')
+                     in (firstPrimeFrom bignum, g')
+
+firstPrimeFrom n = fromJust $ find probablyPrime [n..]
 
 genBigInteger :: Int -> Gen Integer
 genBigInteger n = undefined
 
 -- Bonus properties:
 
+prop_division p' num den = p' > 2 && (den `mod` p) /= 0 ==> ((num - den*quotient) `mod` p) == 0
+  where p        = firstPrimeFrom p'
+        quotient = moduloDiv p num den
 
+prop_exponentiation n b e = n > 0 && e >= 0 ==> ((f e)*b - f (e+1)) `mod` n == 0
+  where f = moduloPower n b
 
 prop_checkTestP = check (7, 5, 4) == False
 prop_checkTestQ = check (7, 5, 4) == False
