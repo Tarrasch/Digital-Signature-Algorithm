@@ -1,6 +1,7 @@
 module DSA where
 
 import System.Random
+import System.IO
 import System.Exit
 import Test.QuickCheck
 import Control.Monad
@@ -64,6 +65,8 @@ hex s = read ("0x" ++ s)
 readVar :: Read a => IO a
 readVar = fmap (read . drop 2) getLine
 
+readHex = fmap (hex . drop 2) getLine
+
 main :: IO ()
 main = do
   gen <- getStdGen
@@ -71,6 +74,7 @@ main = do
   unless (check pqg) $ putStrLn "invalid_group" >> exitSuccess
   putStrLn "valid_group"
   workType <- getLine
+  putStrLn workType
   case workType of
     "genkey" -> do
        n <- readVar
@@ -79,6 +83,25 @@ main = do
        forM_ (xs `zip` ys) $ \(x, y) -> do
          putStrLn $ "x=" ++ show x
          putStrLn $ "y=" ++ show y
+    "sign" -> do
+       keyPair <- liftM2 (,) readVar readVar
+       let loop = do
+              d <- readHex
+              let (r, s) = sign pqg keyPair d
+              putStrLn $ "r=" ++ show r
+              putStrLn $ "s=" ++ show s
+              isEOF >>= (flip unless loop)
+       loop
+    "verify" -> do
+       y <- readVar
+       print y
+       let loop = do
+              (digest, signature) <- (liftM3 (\d r s -> (d,(r,s)))) readHex readVar readVar
+              print digest
+              print signature
+              putStrLn $ "signature_" ++ (if verify pqg y digest signature then "" else "in") ++ "valid"
+              isEOF >>= (flip unless loop)
+       loop
 
 -- Modulo Arithmetic:
 
