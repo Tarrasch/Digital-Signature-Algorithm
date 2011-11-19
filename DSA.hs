@@ -10,6 +10,8 @@ import Data.List
 
 -- 1:
 
+mod2 a b = mod ((mod a b)+b) b
+
 type PrivateKey = Integer
 type PublicKey  = Integer
 type KeyPair    = (PrivateKey, PublicKey) -- (x, y)
@@ -21,11 +23,11 @@ type Signature = (Integer, Integer) -- (r, s)
 
 -- 2:
 
-sign :: RandomGen g => ParamTuple -> KeyPair -> Digest -> g -> (Signature, g)
-sign (p, q, g) (x, y) z gen = ((r, s), gen')
+sign :: ParamTuple -> KeyPair -> Digest -> Signature
+sign (p, q, g) (x, y) z = (r, s)
   where
-    (k, gen') = randomR (1, q-1) gen
-    r = moduloPower p g k `mod` q
+    (k, _) = randomR (1, q-1) constantStdGen
+    r = moduloPower p g k `mod2` q
     s = (z + x*r) // k
     (//) = moduloDiv q
 
@@ -35,11 +37,11 @@ verify :: ParamTuple -> PublicKey -> Digest -> Signature -> Bool
 verify (p, q, g) y z (r, s) = v == r
   where
     w  = moduloDiv q 1 s
-    u1 = (z*w) `mod` q
-    u2 = (r*w) `mod` q
+    u1 = (z*w) `mod2` q
+    u2 = (r*w) `mod2` q
     v  = let g' = moduloPower p g u1
              y' = moduloPower p y u2
-         in (g'*y') `mod` q
+         in (g'*y') `mod2` q
 
 -- 4:
 
@@ -49,7 +51,7 @@ check (p, q, g) = and [
  , q < 2^160
  , probablyPrime p
  , probablyPrime q
- , ((p-1) `mod` q) == 0
+ , ((p-1) `mod2` q) == 0
  , g > 1
  , moduloPower p g q == 1
  ]
@@ -84,7 +86,7 @@ gcdE :: Integer -> Integer -> (Integer, Integer, Integer)
 gcdE a 0 = (a, 1, 0)
 gcdE a b = (d, t, s - q*t)
   where
-    r         = a `mod` b
+    r         = a `mod2` b
     q         = a `div` b
     (d, s, t) = gcdE b r
 
@@ -95,16 +97,17 @@ moduloDiv :: Integer -- n
           -> Integer -- num
           -> Integer -- den
           -> Integer -- (num/den) mod n
-moduloDiv n b a = b*t
-  where (_d, _s, t) = gcdE n a
+moduloDiv n b a = b*t `mod2` n
+  where (_d, _s, t) = gcdE n (a `mod2` n)
 
 moduloPower :: Integer -- m
             -> Integer -- b
             -> Integer -- e
             -> Integer -- (b^e) mod m
 moduloPower m b 0          = 1
-moduloPower m b e | even e = (v*v) `mod` m
-                  | odd e  = (v*v*b) `mod` m
+moduloPower m b e | (e<0)  = error "negative exponent"
+                  | even e = (v*v) `mod2` m
+                  | odd e  = (v*v*b) `mod2` m
   where
     v = moduloPower m b (e `div` 2)
 
