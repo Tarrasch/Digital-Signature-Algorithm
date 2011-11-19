@@ -8,10 +8,14 @@ import Control.Monad
 import Data.Maybe
 import Debug.Trace
 import Data.List
+import Test.QuickCheck.Property
+
+-- 0:
+
+-- This version always give positive numbers
+mod2 a b = mod ((mod a b)+b) b
 
 -- 1:
-
-mod2 a b = mod ((mod a b)+b) b
 
 type PrivateKey = Integer
 type PublicKey  = Integer
@@ -35,14 +39,14 @@ sign (p, q, g) (x, y) z = (r, s)
 -- 3:
 
 verify :: ParamTuple -> PublicKey -> Digest -> Signature -> Bool
-verify (p, q, g) y z (r, s) = v == r
+verify (p, q, g) y z (r, s) = (v - r) `mod` p == 0
   where
     w  = moduloDiv q 1 s
     u1 = (z*w) `mod2` q
     u2 = (r*w) `mod2` q
     v  = let g' = moduloPower p g u1
              y' = moduloPower p y u2
-         in (g'*y') `mod2` q
+         in ((g'*y') `mod2` p) `mod2` q
 
 -- 4:
 
@@ -69,12 +73,12 @@ readHex = fmap (hex . drop 2) getLine
 
 main :: IO ()
 main = do
+  hSetBuffering stdout LineBuffering
   gen <- getStdGen
   pqg@(p, q, g) <- liftM3 (,,) readVar readVar readVar
   unless (check pqg) $ putStrLn "invalid_group" >> exitSuccess
   putStrLn "valid_group"
   workType <- getLine
-  putStrLn workType
   case workType of
     "genkey" -> do
        n <- readVar
@@ -94,11 +98,8 @@ main = do
        loop
     "verify" -> do
        y <- readVar
-       print y
        let loop = do
               (digest, signature) <- (liftM3 (\d r s -> (d,(r,s)))) readHex readVar readVar
-              print digest
-              print signature
               putStrLn $ "signature_" ++ (if verify pqg y digest signature then "" else "in") ++ "valid"
               isEOF >>= (flip unless loop)
        loop
@@ -174,9 +175,6 @@ randomBigPrime n g = let (bignum, g') = randomBigInteger n g
 
 firstPrimeFrom n = fromJust $ find probablyPrime [n..]
 
-genBigInteger :: Int -> Gen Integer
-genBigInteger n = undefined
-
 -- Bonus properties:
 
 prop_division p' num den = p' > 2 && (den `mod` p) /= 0 ==> ((num - den*quotient) `mod` p) == 0
@@ -186,8 +184,11 @@ prop_division p' num den = p' > 2 && (den `mod` p) /= 0 ==> ((num - den*quotient
 prop_exponentiation n b e = n > 0 && e >= 0 ==> ((f e)*b - f (e+1)) `mod` n == 0
   where f = moduloPower n b
 
-prop_checkTestP = check (7, 5, 4) == False
-prop_checkTestQ = check (7, 5, 4) == False
-prop_checkTestG = check (7, 5, 4) == False
-
+-- This test *sometimes* works!
+prop_signverify q' x z = q' > 2 && x > 0 && check (p, q, g) ==> verify (p, q, g) y z sig
+  where q        = firstPrimeFrom (q'+100)
+        g        = head [ g | g <- [2..], moduloPower p g q == 1 ]
+        y        = moduloPower p g x
+        p        = head [ p | i <- [1..], let p = q*i+1, probablyPrime p]
+        sig      = sign (p, q, g) (x, y) z
 
