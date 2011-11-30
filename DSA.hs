@@ -84,7 +84,7 @@ main = do
   case workType of
     "genkey" -> do
        n <- readVar
-       let xs = take n $ randomRs (2, p-2) gen
+       let xs = take n $ randomRs (1, q-1) gen
        let ys = map (moduloPower p g) xs
        forM_ (xs `zip` ys) $ \(x, y) -> do
          putStrLn $ "x=" ++ show x
