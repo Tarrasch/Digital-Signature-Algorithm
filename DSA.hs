@@ -183,6 +183,11 @@ prop_division p' num den = p' > 2 && (den `mod` p) /= 0 ==> ((num - den*quotient
   where p        = firstPrimeFrom p'
         quotient = moduloDiv p num den
 
+prop_division2 p' den = p' > 2 && (den `mod` p) /= 0 ==>
+    ((moduloPower p den (p-2) - inverse) `mod` p) == 0
+  where p       = firstPrimeFrom p'
+        inverse = moduloDiv p 1 den
+
 prop_exponentiation n b e = n > 0 && e >= 0 ==> ((f e)*b - f (e+1)) `mod` n == 0
   where f = moduloPower n b
 
