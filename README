@@ -1,5 +1,20 @@
-Hello!
+Hello,
 
-All verifiable tests passed for us. We also wrote QC properties.
+we fixed the minor restriciveness issue on x in the generation.
 
-Happy grading!
+But as for the "bug" in our signing, we can't see what is wrong
+with it, nor can't we interpret what we should do with
+your counterexample.
+
+The counterexample definetly can be verified after signing.
+We have
+
+(1) created a QC property (no input args) that tests your
+    counterexample in a pure environment, it passes.
+
+(2) ran our program on your counterexample and created
+    the corresponding "verify"-file *counterverify* (attached).
+    that one also outputs valid signature?
+
+Maybe the signing works? Or maybe you can give further steps
+of reproducing faulty behavior.
